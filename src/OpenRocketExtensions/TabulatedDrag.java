@@ -64,9 +64,18 @@ class TabulatedDragCalculator extends BarrowmanCalculator {
     @Override
     public AerodynamicForces getAerodynamicForces(FlightConfiguration configuration,
                                                   FlightConditions conditions, WarningSet warnings) {
-        AerodynamicForces forces = super.getAerodynamicForces(configuration, conditions, warnings);
-        double drag = MathUtil.interpolate(this.mach, this.coeff, conditions.getMach());
-        forces.setCD(drag);
+        AerodynamicForces forces = super.getAerodynamicForces(configuration,
+                conditions, warnings);
+
+        // OpenRocket's Barrowman calculator scales the CD to an axial CD
+        // using a private method. It is linear in the CD, so we will
+        // back-calculate and use that scale factor.
+        // https://github.com/openrocket/openrocket/blob/release-23.09/core/src/net/sf/openrocket/simulation/RK4SimulationStepper.java#L345
+        double aoa_scale = forces.getCDaxial() / forces.getCD();
+        double total_drag = MathUtil.interpolate(this.mach, this.coeff,
+                conditions.getMach());
+
+        forces.setCDaxial(total_drag * aoa_scale);
         return forces;
     }
 }
